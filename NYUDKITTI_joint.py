@@ -7,6 +7,31 @@ from torch.autograd import Variable
 from models import net
 import streamlit as st
 
+if "photo" not in st.session_state:
+    st.session_state["photo"]="not done"
+
+st.title("HydraNets (Segmentation and Depth)")
+
+st.sidebar.title("Operations")
+
+st.markdown("""
+
+    <style>
+    [data-testid="stSidebar"][aria-expanded="false"] > div:first-child {
+        width: 350px;
+        background-color: black;
+    }
+    body {background-color: powderblue;}
+
+    [data-testid="stSidebar"][aria-expanded="false"] > div:first-child {
+        width: 350px;
+        margin-left: -350px;
+    }
+    </style>
+    """,
+unsafe_allow_html=True,)
+
+
 # Pre-processing and post-processing constants #
 CMAP_NYUD = np.load('cmap_nyud.npy')
 CMAP_KITTI = np.load('cmap_kitti.npy')
@@ -60,21 +85,6 @@ with torch.no_grad():
                        interpolation=cv2.INTER_CUBIC)
     segm_nyud = CMAP_NYUD[segm.argmax(axis=2) + 1].astype(np.uint8)
     depth_nyud = np.abs(depth)
-    # kitti
-    img_var = Variable(torch.from_numpy(prepare_img(img_kitti).transpose(2, 0, 1)[None]), requires_grad=False).float()
-    if HAS_CUDA:
-        img_var = img_var.cuda()
-    segm, depth = model(img_var)
-    segm = cv2.resize(segm[0, (NUM_CLASSES_NYUD):(NUM_CLASSES_NYUD + NUM_CLASSES_KITTI)].cpu().data.numpy().transpose(1, 2, 0),
-                      img_kitti.shape[:2][::-1],
-                      interpolation=cv2.INTER_CUBIC)
-    depth = cv2.resize(depth[0, 0].cpu().data.numpy(),
-                       img_kitti.shape[:2][::-1],
-                       interpolation=cv2.INTER_CUBIC)
-    segm_kitti = CMAP_KITTI[segm.argmax(axis=2)].astype(np.uint8)
-    depth_kitti = np.abs(depth)
-
-
 
 width = st.sidebar.slider("plot width", 1, 25, 6)
 height = st.sidebar.slider("plot height", 1, 25, 1)
@@ -83,10 +93,10 @@ f1, ax1 = plt.subplots(figsize=(width,height))
 ax1.imshow(img_nyud)
 
 f2, ax2 = plt.subplots(figsize=(width,height))
-ax2.imshow(segm_kitti)
+ax2.imshow(segm_nyud)
 
 f3, ax3 = plt.subplots(figsize=(width,height))
-ax3.imshow(depth_kitti)
+ax3.imshow(depth_nyud)
 
 ax1.set_title('Original', fontsize=30)
 # ax2.imshow(segm_kitti)
